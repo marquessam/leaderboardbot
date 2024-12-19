@@ -1,9 +1,8 @@
 {
   "version": 2,
-  "routes": [
-    {
-      "src": "/api/discord-bot",
-      "dest": "/api/discord-bot.js"
+  "functions": {
+    "api/*.js": {
+      "runtime": "@vercel/node@latest"
     }
-  ]
+  }
 }
