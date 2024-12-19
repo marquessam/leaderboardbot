@@ -1,10 +1,7 @@
 {
   "name": "leaderboardbot",
   "version": "1.0.0",
-  "description": "Discord bot for Select Start leaderboards",
-  "scripts": {
-    "start": "vercel dev"
-  },
+  "type": "module",
   "dependencies": {
     "discord.js": "^14.14.1",
     "node-fetch": "^3.3.2"
