@@ -9,9 +9,8 @@ const client = new Client({
 });
 
 export default async function handler(req, res) {
-    console.log('API endpoint hit');
-    
     try {
+        // Initialize bot if not already running
         if (!client.isReady()) {
             await client.login(process.env.DISCORD_TOKEN);
             
@@ -26,10 +25,7 @@ export default async function handler(req, res) {
             });
         }
 
-        return res.status(200).json({ 
-            status: 'Bot running',
-            botUser: client.user?.tag
-        });
+        return res.status(200).json({ status: 'Bot is running' });
     } catch (error) {
         console.error('Error:', error);
         return res.status(500).json({ error: error.message });
