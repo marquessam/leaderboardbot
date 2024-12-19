@@ -1,10 +1,7 @@
 {
   "version": 2,
-  "routes": [
-    {
-      "src": "/api/discord-bot",
-      "methods": ["GET", "POST"],
-      "dest": "/api/discord-bot.js"
-    }
-  ]
+  "builds": [{
+    "src": "api/**/*.js",
+    "use": "@vercel/node"
+  }]
 }
