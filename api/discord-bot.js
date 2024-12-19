@@ -1,6 +1,5 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 
-// Initialize client outside the handler
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -9,48 +8,30 @@ const client = new Client({
     ]
 });
 
-let isInitialized = false;
-
 export default async function handler(req, res) {
-    console.log('Handler called, initialization status:', isInitialized);
-
+    console.log('API endpoint hit');
+    
     try {
-        if (!isInitialized) {
-            console.log('Initializing bot...');
+        if (!client.isReady()) {
+            await client.login(process.env.DISCORD_TOKEN);
             
-            // Setup bot event handlers
-            client.on('ready', () => {
+            client.once('ready', () => {
                 console.log(`Logged in as ${client.user.tag}`);
             });
 
             client.on('messageCreate', async message => {
-                console.log('Message received:', message.content);
-                if (message.content === '!leaderboard') {
-                    await message.channel.send('Leaderboard coming soon!');
+                if (message.content === '!ping') {
+                    await message.reply('Pong!');
                 }
             });
-
-            // Login
-            await client.login(process.env.DISCORD_TOKEN);
-            isInitialized = true;
-            console.log('Bot initialized successfully');
         }
 
-        // Handle Discord webhook verification
-        if (req.body?.type === 1) {
-            return res.status(200).json({ type: 1 });
-        }
-
-        return res.status(200).json({
-            status: 'Bot is running',
-            initialized: isInitialized,
-            clientReady: client.isReady()
+        return res.status(200).json({ 
+            status: 'Bot running',
+            botUser: client.user?.tag
         });
     } catch (error) {
-        console.error('Bot error:', error);
-        return res.status(500).json({
-            error: error.message,
-            stack: error.stack
-        });
+        console.error('Error:', error);
+        return res.status(500).json({ error: error.message });
     }
 }
