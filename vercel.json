@@ -1,11 +1,9 @@
 {
   "version": 2,
-  "builds": [{
-    "src": "api/**/index.js",
-    "use": "@vercel/node"
-  }],
-  "routes": [{
-    "src": "/api/discord",
-    "dest": "/api/discord/index.js"
-  }]
+  "routes": [
+    {
+      "src": "/api/connect",
+      "dest": "/api/connect.js"
+    }
+  ]
 }
