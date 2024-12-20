@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, ActivityType } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, PermissionsBitField } from 'discord.js';
 
 const client = new Client({
     intents: [
@@ -9,36 +9,56 @@ const client = new Client({
     ]
 });
 
-// Global variable to track connection state
 let isInitialized = false;
 
 client.on('ready', () => {
     console.log(`Bot Ready! Logged in as ${client.user.tag}`);
+    
+    // Log permissions for each channel in each guild
+    client.guilds.cache.forEach(guild => {
+        console.log(`Guild: ${guild.name}`);
+        guild.channels.cache.forEach(channel => {
+            if (channel.isTextBased()) {
+                const permissions = channel.permissionsFor(client.user);
+                console.log(`Channel ${channel.name} permissions:`, {
+                    viewChannel: permissions.has(PermissionsBitField.Flags.ViewChannel),
+                    sendMessages: permissions.has(PermissionsBitField.Flags.SendMessages),
+                    readMessageHistory: permissions.has(PermissionsBitField.Flags.ReadMessageHistory)
+                });
+            }
+        });
+    });
+
     client.user.setActivity('!ping', { type: ActivityType.Listening });
 });
 
 client.on('messageCreate', async (message) => {
-    // Log every message received
-    console.log(`Message received from ${message.author.tag}: ${message.content}`);
+    // Detailed message logging
+    console.log('Message received:', {
+        content: message.content,
+        author: message.author.tag,
+        channel: message.channel.name,
+        guild: message.guild.name,
+        botPermissions: message.channel.permissionsFor(client.user).toArray()
+    });
     
-    // Ignore messages from bots
     if (message.author.bot) return;
     
-    // Simple ping command
     if (message.content.toLowerCase() === '!ping') {
         try {
+            // Check permissions before attempting to send
+            const permissions = message.channel.permissionsFor(client.user);
+            if (!permissions.has(PermissionsBitField.Flags.SendMessages)) {
+                console.error('Missing permission to send messages in this channel');
+                return;
+            }
+
             const sent = await message.channel.send('Pong!');
-            console.log(`Sent pong response: ${sent.id}`);
+            console.log('Successfully sent pong response');
         } catch (err) {
             console.error('Error sending pong:', err);
         }
     }
-});
-
-// Error handling
-client.on('error', error => {
-    console.error('Discord client error:', error);
-    isInitialized = false;
 });
 
 export default async function handler(req, res) {
@@ -50,7 +70,6 @@ export default async function handler(req, res) {
             console.log('Bot initialized successfully');
         }
 
-        // Return detailed status
         const status = {
             initialized: isInitialized,
             ready: client.isReady(),
@@ -58,7 +77,12 @@ export default async function handler(req, res) {
             guildCount: client.guilds.cache.size,
             guilds: Array.from(client.guilds.cache.values()).map(g => ({
                 name: g.name,
-                memberCount: g.memberCount
+                channels: Array.from(g.channels.cache.values())
+                    .filter(c => c.isTextBased())
+                    .map(c => ({
+                        name: c.name,
+                        permissions: c.permissionsFor(client.user)?.toArray() || []
+                    }))
             })),
             ping: client.ws.ping
         };
