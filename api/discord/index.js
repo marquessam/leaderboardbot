@@ -12,63 +12,85 @@ const client = new Client({
 
 let isConnected = false;
 
-// More detailed event handling
+// Debug logging for all events
+client.on('raw', async event => {
+    console.log('Raw event received:', event.t);
+});
+
 client.on(Events.ClientReady, () => {
-    console.log(`Successfully logged in as ${client.user.tag}`);
+    console.log(`Bot Ready Event: Logged in as ${client.user.tag}`);
+    console.log('Guilds:', client.guilds.cache.map(g => g.name));
     isConnected = true;
 });
 
-client.on(Events.MessageCreate, async (message) => {
-    console.log(`Message received in ${message.channel.name}: ${message.content}`);
-    
+client.on('messageCreate', async message => {
+    console.log('Message received:', {
+        content: message.content,
+        author: message.author.tag,
+        channel: message.channel.name,
+        guild: message.guild?.name
+    });
+
+    // Don't respond to bot messages
+    if (message.author.bot) return;
+
     if (message.content === '!ping') {
         try {
-            const reply = await message.reply('Pong!');
-            console.log(`Replied to ping with message ID: ${reply.id}`);
+            console.log('Attempting to send pong response');
+            await message.reply('Pong!');
+            console.log('Pong response sent successfully');
         } catch (error) {
-            console.error('Failed to reply:', error);
+            console.error('Error sending pong:', error);
         }
     }
 });
 
-client.on(Events.Error, error => {
+client.on('error', error => {
     console.error('Discord client error:', error);
     isConnected = false;
 });
 
 export default async function handler(req, res) {
-    console.log('Handler called, current status:', {
-        connected: isConnected,
-        ready: client.isReady(),
-        user: client.user?.tag
-    });
-
+    console.log('API handler called');
+    
     try {
         if (!isConnected) {
-            console.log('Attempting to connect...');
+            console.log('Bot not connected, attempting to connect...');
+            
+            // Reinitialize event handlers
+            client.removeAllListeners();
+            
             await client.login(process.env.DISCORD_TOKEN);
+            console.log('Login successful');
             
-            // Wait briefly to ensure connection is established
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            console.log('Login attempt completed, new status:', {
-                connected: isConnected,
-                ready: client.isReady()
+            // Wait for ready event
+            await new Promise((resolve) => {
+                client.once('ready', () => {
+                    console.log('Ready event received');
+                    isConnected = true;
+                    resolve();
+                });
             });
         }
 
-        return res.status(200).json({
+        const debugInfo = {
             status: 'Bot is running',
             connected: isConnected,
             ready: client.isReady(),
             user: client.user?.tag,
-            guilds: client.guilds.cache.size
-        });
+            guilds: client.guilds.cache.size,
+            guildNames: Array.from(client.guilds.cache.values()).map(g => g.name),
+            eventNames: client.eventNames()
+        };
+
+        console.log('Debug info:', debugInfo);
+        return res.status(200).json(debugInfo);
+
     } catch (error) {
         console.error('Handler error:', error);
         return res.status(500).json({
             error: error.message,
-            type: error.constructor.name,
+            stack: error.stack,
             connected: isConnected,
             ready: client?.isReady?.() || false
         });
